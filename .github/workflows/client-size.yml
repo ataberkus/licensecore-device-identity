@@ -1,0 +1,33 @@
+# Assert client ESM gzip size < 18 KB (T15 / phase-1 budget).
+name: client-size
+
+on:
+  push:
+    paths:
+      - 'packages/client/**'
+      - 'packages/shared/**'
+      - 'scripts/client-size.mjs'
+      - 'pnpm-lock.yaml'
+  pull_request:
+    paths:
+      - 'packages/client/**'
+      - 'packages/shared/**'
+      - 'scripts/client-size.mjs'
+      - 'pnpm-lock.yaml'
+
+jobs:
+  size:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: pnpm
+      - run: pnpm i --frozen-lockfile
+      - run: pnpm --filter @licensecore/shared build
+      - run: pnpm --filter @licensecore/client build
+      - run: node scripts/client-size.mjs
