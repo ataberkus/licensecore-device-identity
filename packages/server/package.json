@@ -1,0 +1,41 @@
+{
+  "name": "@licensecore/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "description": "Device-identity Hono server — challenge, resolve, reverify, evidence.",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "dev": "tsx src/dev-server.ts",
+    "test": "vitest run --config vitest.config.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "build": "tsc -p tsconfig.json",
+    "db:generate:sqlite": "drizzle-kit generate --config=drizzle.config.sqlite.ts",
+    "db:generate:pg": "drizzle-kit generate --config=drizzle.config.pg.ts"
+  },
+  "dependencies": {
+    "@licensecore/shared": "workspace:*",
+    "@simplewebauthn/server": "^13.1.1",
+    "better-sqlite3": "^11.8.1",
+    "drizzle-orm": "^0.39.3",
+    "hono": "^4.7.2",
+    "jose": "^5.9.6",
+    "postgres": "^3.4.5",
+    "uuidv7": "^1.0.2"
+  },
+  "devDependencies": {
+    "@hono/node-server": "^2.1.0",
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/node": "^22.13.4",
+    "drizzle-kit": "^0.30.4",
+    "tsx": "^4.23.5",
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.5"
+  }
+}

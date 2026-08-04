@@ -1,0 +1,39 @@
+{
+  "name": "@licensecore/shared",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./constants/collectors": {
+      "types": "./dist/constants/collectors.d.ts",
+      "import": "./dist/constants/collectors.js"
+    },
+    "./constants/thresholds": {
+      "types": "./dist/constants/thresholds.d.ts",
+      "import": "./dist/constants/thresholds.js"
+    },
+    "./crypto/hash": {
+      "types": "./dist/crypto/hash.d.ts",
+      "import": "./dist/crypto/hash.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\""
+  },
+  "dependencies": {
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3"
+  }
+}

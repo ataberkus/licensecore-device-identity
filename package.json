@@ -1,0 +1,33 @@
+{
+  "name": "licensecore-device-identity",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@9.15.9",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "concurrently -k -n server,play -c blue,magenta \"pnpm --filter @licensecore/server dev\" \"pnpm --filter @licensecore/playground dev\"",
+    "dev:server": "pnpm --filter @licensecore/server dev",
+    "dev:play": "pnpm --filter @licensecore/playground dev",
+    "build": "pnpm -r --filter @licensecore/shared build && pnpm --filter @licensecore/client build && pnpm --filter @licensecore/playground build",
+    "typecheck": "pnpm -r typecheck",
+    "typecheck:shared": "pnpm --filter @licensecore/shared typecheck",
+    "test": "vitest run",
+    "test:unit": "vitest run",
+    "test:e2e": "playwright test -c tests/e2e/playwright.config.ts",
+    "seed": "tsx scripts/seed.ts",
+    "bench:collectors": "tsx bench/collectors.ts",
+    "size:client": "pnpm --filter @licensecore/shared build && pnpm --filter @licensecore/client build && node scripts/client-size.mjs",
+    "lint": "echo \"No linter configured yet\""
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.50.1",
+    "@types/better-sqlite3": "^7.6.12",
+    "better-sqlite3": "^11.8.1",
+    "concurrently": "^10.0.4",
+    "tsx": "^4.23.5",
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.5"
+  }
+}
