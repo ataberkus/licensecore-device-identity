@@ -11,11 +11,21 @@ function bytesToHex(bytes: ArrayBuffer): string {
   return out;
 }
 
+function requireSubtle(): SubtleCrypto {
+  const subtle = globalThis.crypto?.subtle;
+  if (!subtle) {
+    throw new Error(
+      'Web Crypto (crypto.subtle) is unavailable. This page must be served over HTTPS or localhost — plain HTTP on a LAN IP is not a secure context, so hashing and ECDSA anchors cannot run.',
+    );
+  }
+  return subtle;
+}
+
 /** SHA-256 hex (64 chars) via SubtleCrypto. */
 export async function sha256Hex(data: BufferSource | string): Promise<string> {
   const buf =
     typeof data === 'string' ? textEncoder.encode(data) : data;
-  const digest = await crypto.subtle.digest('SHA-256', buf);
+  const digest = await requireSubtle().digest('SHA-256', buf);
   return bytesToHex(digest);
 }
 

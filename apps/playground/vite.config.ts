@@ -1,12 +1,16 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import basicSsl from '@vitejs/plugin-basic-ssl';
 import { defineConfig } from 'vite';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
+  // HTTPS so LAN devices get a secure context (crypto.subtle / WebCrypto).
+  // Plain http://192.168.x.x is NOT secure — digest/sign will crash.
+  plugins: [basicSsl()],
   server: {
-    host: '127.0.0.1',
+    host: true,
     port: 5173,
     strictPort: true,
     proxy: {

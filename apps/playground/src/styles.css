@@ -43,6 +43,15 @@ body {
   letter-spacing: -0.02em;
 }
 
+.secure-banner {
+  margin: 0 0 1rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--err);
+  background: #f8e8e8;
+  color: var(--err);
+  font-size: 0.95rem;
+}
+
 .hero .sub {
   margin: 0 0 1.25rem;
   color: var(--muted);

@@ -6,7 +6,7 @@
   "license": "MIT",
   "description": "Diagnostics playground for device identity. Vite, plain TS, no UI framework.",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --host",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "build": "tsc -p tsconfig.json --noEmit && vite build",
     "preview": "vite preview"
@@ -16,6 +16,7 @@
     "@licensecore/shared": "workspace:*"
   },
   "devDependencies": {
+    "@vitejs/plugin-basic-ssl": "^2.3.0",
     "typescript": "^5.7.3",
     "vite": "^6.1.0"
   }

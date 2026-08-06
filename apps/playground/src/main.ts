@@ -43,7 +43,27 @@ mountShell(app, (id) => {
 
 hydrateEvidenceFromStorage();
 render();
-void autoResolveOnLoad();
+
+if (!hasWebCrypto()) {
+  state.status =
+    'Blocked: insecure context (no crypto.subtle). Use https://<host>:5173 on the other PC and accept the certificate warning.';
+  appendRunLog({
+    action: 'boot',
+    ok: false,
+    message: 'insecure context — crypto.subtle unavailable',
+  });
+  render();
+} else {
+  void autoResolveOnLoad();
+}
+
+function hasWebCrypto(): boolean {
+  return (
+    typeof window !== 'undefined' &&
+    window.isSecureContext &&
+    !!globalThis.crypto?.subtle
+  );
+}
 
 async function autoResolveOnLoad(): Promise<void> {
   await runResolveFlow({ enrollHardwareAnchor: false, action: 'auto-resolve' });
@@ -89,6 +109,17 @@ async function runResolveFlow(opts: {
   enrollHardwareAnchor: boolean;
   action: string;
 }): Promise<void> {
+  if (!hasWebCrypto()) {
+    state.status =
+      'Blocked: insecure context (no crypto.subtle). Open via HTTPS or localhost.';
+    appendRunLog({
+      action: opts.action,
+      ok: false,
+      message: 'insecure context — crypto.subtle unavailable',
+    });
+    render();
+    return;
+  }
   setBusy(true, opts.action);
   try {
     // Collect once for diagnostics table + drift; resolve() collects again internally.

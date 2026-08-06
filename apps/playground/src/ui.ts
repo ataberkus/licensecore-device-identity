@@ -48,6 +48,8 @@ export function mountShell(root: HTMLElement, onAction: (id: ActionId) => void):
       <p class="sub">Diagnostics playground — resolve evidence → server-owned <code>device_id</code>. No seats, no login.</p>
     </header>
 
+    <div class="secure-banner" id="secureBanner" hidden></div>
+
     <section class="identity" id="identity">
       <div class="device-id mono" id="deviceId">—</div>
       <div class="badges" id="badges"></div>
@@ -111,6 +113,22 @@ export function renderState(root: HTMLElement, state: PlaygroundState): void {
   const integrityEl = root.querySelector('#integrity');
   const diffEl = root.querySelector('#diff');
   const logEl = root.querySelector('#log');
+  const bannerEl = root.querySelector('#secureBanner');
+
+  if (bannerEl instanceof HTMLElement) {
+    const secure =
+      typeof window !== 'undefined' &&
+      window.isSecureContext &&
+      !!globalThis.crypto?.subtle;
+    if (!secure) {
+      bannerEl.hidden = false;
+      bannerEl.textContent =
+        'Insecure context: crypto.subtle is missing. Open this playground via https://… (Vite HTTPS) or localhost — not plain http://192.168.x.x. Accept the self-signed cert warning on the other PC.';
+    } else {
+      bannerEl.hidden = true;
+      bannerEl.textContent = '';
+    }
+  }
 
   if (deviceEl) {
     deviceEl.textContent = state.resolve?.deviceId ?? '— no resolve yet —';

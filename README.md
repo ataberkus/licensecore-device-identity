@@ -204,8 +204,9 @@ pnpm i
 pnpm dev
 ```
 
-- Playground: http://127.0.0.1:5173  
-- API: http://127.0.0.1:8787  
+- Playground: **https://127.0.0.1:5173** (HTTPS — required for `crypto.subtle`)
+- API: http://127.0.0.1:8787 (proxied via `/v1` from the playground)
+- On another device on your LAN: use the **https://** Network URL Vite prints (accept the self-signed cert warning). Plain `http://192.168.x.x` will fail — browsers block Web Crypto off localhost.  
 
 Without env vars, the server uses built-in test secrets and SQLite at `data/device-identity.sqlite`.
 
