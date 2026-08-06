@@ -10,7 +10,7 @@
     "dev": "concurrently -k -n server,play -c blue,magenta \"pnpm --filter @licensecore/server dev\" \"pnpm --filter @licensecore/playground dev\"",
     "dev:server": "pnpm --filter @licensecore/server dev",
     "dev:play": "pnpm --filter @licensecore/playground dev",
-    "build": "pnpm -r --filter @licensecore/shared build && pnpm --filter @licensecore/client build && pnpm --filter @licensecore/playground build",
+    "build": "pnpm -r --filter @licensecore/shared build && pnpm --filter @licensecore/client build && pnpm --filter @licensecore/react build && pnpm --filter @licensecore/vue build && pnpm --filter @licensecore/playground build",
     "typecheck": "pnpm -r typecheck",
     "typecheck:shared": "pnpm --filter @licensecore/shared typecheck",
     "test": "vitest run",

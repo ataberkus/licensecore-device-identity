@@ -5,6 +5,8 @@ Browser device identity for licensing / anti-fraud. The client sends **evidence 
 | Package | Role |
 |---|---|
 | `@licensecore/client` | Browser SDK (zero runtime deps, &lt; 18 KB gzip) |
+| `@licensecore/react` | React hook (`useDeviceIdentity`) |
+| `@licensecore/vue` | Vue 3 composable (`useDeviceIdentity`) |
 | `@licensecore/server` | Hono API: challenge / resolve / reverify |
 | `@licensecore/shared` | Zod wire types (import on both sides) |
 | `apps/playground` | Diagnostics UI only — not required in production |
@@ -79,6 +81,8 @@ From your app’s `package.json` (pnpm example):
 {
   "dependencies": {
     "@licensecore/client": "workspace:*",
+    "@licensecore/react": "workspace:*",
+    "@licensecore/vue": "workspace:*",
     "@licensecore/server": "workspace:*",
     "@licensecore/shared": "workspace:*"
   }
@@ -97,11 +101,13 @@ Or with a relative path:
 }
 ```
 
-Build once so the client ships `dist/`:
+Build once so the client (and framework wrappers) ship `dist/`:
 
 ```bash
 pnpm --filter @licensecore/shared build
 pnpm --filter @licensecore/client build
+pnpm --filter @licensecore/react build
+pnpm --filter @licensecore/vue build
 ```
 
 ### 2. Mount the API on your backend
@@ -193,6 +199,59 @@ await di.resolve({ enrollHardwareAnchor: true });
 ```
 
 One-shot helpers (same package): `collect()`, `resolve()`, `reverify()`, `wipeLocalState()`, `wipeAnchors()`.
+
+#### React (`@licensecore/react`)
+
+```tsx
+import { useDeviceIdentity } from '@licensecore/react';
+
+function App() {
+  // autoResolve defaults to true — resolve() runs once on mount
+  const { status, deviceId, deviceToken, error, reverify, resolve } =
+    useDeviceIdentity({ baseUrl: '' });
+
+  if (status === 'loading') return <p>Resolving device…</p>;
+  if (status === 'error') return <p>{String(error)}</p>;
+
+  return (
+    <div>
+      <p>deviceId: {deviceId}</p>
+      <button type="button" onClick={() => void reverify()}>
+        Refresh token
+      </button>
+      <button type="button" onClick={() => void resolve()}>
+        Resolve again
+      </button>
+    </div>
+  );
+}
+
+// Imperative only:
+// useDeviceIdentity({ baseUrl: '', autoResolve: false })
+```
+
+#### Vue 3 (`@licensecore/vue`)
+
+```vue
+<script setup lang="ts">
+import { useDeviceIdentity } from '@licensecore/vue';
+
+const { status, deviceId, error, reverify, resolve } = useDeviceIdentity({
+  baseUrl: '',
+  // autoResolve: false, // opt out of mount-time resolve
+});
+</script>
+
+<template>
+  <p v-if="status === 'loading'">Resolving device…</p>
+  <p v-else-if="status === 'error'">{{ error }}</p>
+  <div v-else>
+    <p>deviceId: {{ deviceId }}</p>
+    <button type="button" @click="reverify()">Refresh token</button>
+    <button type="button" @click="resolve()">Resolve again</button>
+  </div>
+</template>
+```
 
 **Vite proxy example** (so `baseUrl: ''` works in dev):
 
