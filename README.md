@@ -13,6 +13,60 @@ Browser device identity for licensing / anti-fraud. The client sends **evidence 
 
 ---
 
+## Portable (no install)
+
+Use the browser SDK **without npm** — copy a single file or load it from a CDN after a release tag.
+
+Build the portable artifact:
+
+```bash
+pnpm --filter @licensecore/shared build
+pnpm --filter @licensecore/client build
+```
+
+Output: `packages/client/dist/licensecore-client.min.js` (IIFE, zero runtime deps, &lt; 18 KB gzip).
+
+### Vendor (recommended)
+
+Copy `licensecore-client.min.js` into your app and load it:
+
+```html
+<script src="/static/licensecore-client.min.js"></script>
+<script>
+  const di = new LicenseCore.DeviceIdentityClient({
+    baseUrl: '', // same-origin proxy to your API, or full URL
+  });
+  const result = await di.resolve();
+</script>
+```
+
+Global API on `LicenseCore`: `DeviceIdentityClient`, `resolve`, `collect`, `reverify`, `wipeAnchors`, `wipeLocalState`, and transport helpers exported from the SDK.
+
+One-shot helpers without the class:
+
+```html
+<script>
+  const evidence = await LicenseCore.collect();
+  const result = await LicenseCore.resolve({ baseUrl: '' });
+</script>
+```
+
+You still need the device-identity **API** mounted on your backend (see below). Serve over **HTTPS** — browsers require a secure context for Web Crypto.
+
+Smoke example: [examples/portable/index.html](./examples/portable/index.html).
+
+### CDN (GitHub release)
+
+After pushing a version tag (e.g. `v0.1.0`), CI attaches `licensecore-client.min.js` to the GitHub Release. Load via jsDelivr:
+
+```html
+<script src="https://cdn.jsdelivr.net/gh/ataberkus/licensecore-device-identity@v0.1.0/packages/client/dist/licensecore-client.min.js"></script>
+```
+
+Replace `v0.1.0` with your tag. Pin the version in production.
+
+---
+
 ## Use in another app
 
 Packages are workspace-local (`private: true`). Point your app at this repo via `workspace:` / `file:` / git submodule — do not expect a public npm publish yet.

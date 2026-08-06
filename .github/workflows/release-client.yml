@@ -1,0 +1,36 @@
+# Build and attach portable client bundle on version tags.
+name: release-client
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: pnpm
+
+      - run: pnpm i --frozen-lockfile
+      - run: pnpm --filter @licensecore/shared build
+      - run: pnpm --filter @licensecore/client build
+      - run: node scripts/client-size.mjs
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: packages/client/dist/licensecore-client.min.js
+          generate_release_notes: true

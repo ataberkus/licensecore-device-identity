@@ -15,7 +15,7 @@
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "unpkg": "./dist/index.global.js",
+  "unpkg": "./dist/licensecore-client.min.js",
   "files": [
     "dist"
   ],

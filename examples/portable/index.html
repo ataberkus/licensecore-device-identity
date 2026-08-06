@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LicenseCore portable client</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        max-width: 40rem;
+        margin: 2rem auto;
+        padding: 0 1rem;
+      }
+      pre {
+        background: #f4f4f4;
+        padding: 1rem;
+        overflow: auto;
+      }
+      button {
+        margin-top: 0.5rem;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Portable client smoke test</h1>
+    <p>
+      Loads <code>licensecore-client.min.js</code> via a script tag — no npm
+      install. Requires a running device-identity API (see README).
+    </p>
+    <label>
+      API base URL
+      <input id="baseUrl" type="text" value="" size="40" placeholder="'' = same origin" />
+    </label>
+    <br />
+    <button id="resolve">resolve()</button>
+    <button id="collect">collect()</button>
+    <pre id="out">Waiting…</pre>
+
+    <!-- After build: pnpm --filter @licensecore/client build -->
+    <script src="../../packages/client/dist/licensecore-client.min.js"></script>
+    <script>
+      const out = document.getElementById('out');
+      const baseUrlInput = document.getElementById('baseUrl');
+
+      function log(value) {
+        out.textContent =
+          typeof value === 'string' ? value : JSON.stringify(value, null, 2);
+      }
+
+      if (typeof LicenseCore === 'undefined') {
+        log('FAIL: LicenseCore global not found. Run client build first.');
+      } else {
+        log('LicenseCore loaded. API: ' + Object.keys(LicenseCore).join(', '));
+      }
+
+      document.getElementById('resolve').addEventListener('click', async () => {
+        try {
+          const di = new LicenseCore.DeviceIdentityClient({
+            baseUrl: baseUrlInput.value,
+          });
+          log(await di.resolve());
+        } catch (err) {
+          log(String(err));
+        }
+      });
+
+      document.getElementById('collect').addEventListener('click', async () => {
+        try {
+          log(await LicenseCore.collect());
+        } catch (err) {
+          log(String(err));
+        }
+      });
+    </script>
+  </body>
+</html>
