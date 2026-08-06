@@ -2,7 +2,12 @@ import { z } from 'zod';
 import { ERROR_CODES } from '../errors.js';
 import { AnchorProofSchema } from './anchor.js';
 import { AnchorTierSchema } from './anchor.js';
-import { EvidenceBundleSchema, IntegrityReportSchema } from './evidence.js';
+import {
+  ComponentHashesSchema,
+  EvidenceBundleSchema,
+  EvidenceProfileSchema,
+  IntegrityReportSchema,
+} from './evidence.js';
 
 export const ConfidenceSchema = z.enum(['high', 'medium', 'low']);
 export type Confidence = z.infer<typeof ConfidenceSchema>;
@@ -76,9 +81,10 @@ export type ServerSignals = z.infer<typeof ServerSignalsSchema>;
 
 export const EvidenceRevisionSchema = z.object({
   revision: z.number().int().nonnegative(),
+  profile: EvidenceProfileSchema,
   stableHash: z.string().min(1),
   volatileHash: z.string().min(1),
-  componentHashes: EvidenceBundleSchema.shape.componentHashes,
+  componentHashes: ComponentHashesSchema,
   integrity: IntegrityReportSchema,
   serverSignals: ServerSignalsSchema,
   createdAt: z.string().min(1),

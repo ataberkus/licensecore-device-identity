@@ -1,5 +1,5 @@
 import { and, desc, eq, gte, or, sql } from 'drizzle-orm';
-import type { AnchorTier } from '@licensecore/shared';
+import type { AnchorTier, EvidenceProfile } from '@licensecore/shared';
 import type { AppDb } from './index.js';
 import {
   deviceAnchors,
@@ -19,7 +19,12 @@ import type {
   InsertEvidence,
   InsertEvent,
 } from './store.js';
-import { lookbackCutoffIso, nowIso, stableHashPrefix } from './store.js';
+import {
+  coerceEvidenceProfile,
+  lookbackCutoffIso,
+  nowIso,
+  stableHashPrefix,
+} from './store.js';
 
 export class PostgresDeviceStore implements DeviceStore {
   constructor(private readonly app: Extract<AppDb, { dialect: 'postgres' }>) {}
@@ -64,6 +69,7 @@ export class PostgresDeviceStore implements DeviceStore {
   async findCandidates(opts: {
     asn: number | null | undefined;
     stableHash: string;
+    profile: EvidenceProfile;
     nowMs?: number;
   }): Promise<CandidateEvidence[]> {
     const cutoff = lookbackCutoffIso(opts.nowMs);
@@ -82,6 +88,7 @@ export class PostgresDeviceStore implements DeviceStore {
         and(
           gte(deviceEvidence.createdAt, cutoff),
           sql`${devices.retiredAt} IS NULL`,
+          eq(deviceEvidence.profile, opts.profile),
           or(eq(deviceEvidence.stableHashPrefix, prefix), asnCond),
         ),
       )
@@ -178,6 +185,7 @@ export class PostgresDeviceStore implements DeviceStore {
       .values({
         deviceId: row.deviceId,
         revision: row.revision,
+        profile: row.profile,
         stableHash: row.stableHash,
         stableHashPrefix: stableHashPrefix(row.stableHash),
         volatileHash: row.volatileHash,
@@ -255,6 +263,7 @@ function mapEvidence(r: typeof deviceEvidence.$inferSelect): EvidenceRecord {
     id: r.id,
     deviceId: r.deviceId,
     revision: r.revision,
+    profile: coerceEvidenceProfile(r.profile),
     stableHash: r.stableHash,
     stableHashPrefix: r.stableHashPrefix,
     volatileHash: r.volatileHash,

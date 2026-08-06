@@ -8,8 +8,11 @@ import {
   runCollectors,
   wipeLocalState,
 } from '@licensecore/client';
-import type { EvidenceBundle, ResolveResponse } from '@licensecore/shared';
-import type { CollectorId } from '@licensecore/shared/constants/collectors';
+import type { EvidenceBundle, EvidenceProfile, ResolveResponse } from '@licensecore/shared';
+import {
+  DEFAULT_EVIDENCE_PROFILE,
+  type CollectorId,
+} from '@licensecore/shared/constants/collectors';
 import { appendRunLog } from './log.js';
 import {
   mountShell,
@@ -22,6 +25,7 @@ import './styles.css';
 
 const EVIDENCE_LS_KEY = 'lc.playground.lastEvidence';
 const PREV_EVIDENCE_LS_KEY = 'lc.playground.prevEvidence';
+const PROFILE_LS_KEY = 'lc.playground.profile';
 
 const state: PlaygroundState = {
   resolve: null,
@@ -31,15 +35,28 @@ const state: PlaygroundState = {
   lastNonce: null,
   busy: false,
   status: 'Ready',
+  profile: loadProfile(),
 };
 
 const appEl = document.querySelector('#app');
 if (!(appEl instanceof HTMLElement)) throw new Error('#app missing');
 const app: HTMLElement = appEl;
 
-mountShell(app, (id) => {
-  void handleAction(id);
-});
+mountShell(
+  app,
+  (id) => {
+    void handleAction(id);
+  },
+  (profile) => {
+    state.profile = profile;
+    try {
+      localStorage.setItem(PROFILE_LS_KEY, profile);
+    } catch {
+      /* ignore */
+    }
+    render();
+  },
+);
 
 hydrateEvidenceFromStorage();
 render();
@@ -123,13 +140,14 @@ async function runResolveFlow(opts: {
   setBusy(true, opts.action);
   try {
     // Collect once for diagnostics table + drift; resolve() collects again internally.
-    const { evidence, raw } = await runCollectors();
+    const { evidence, raw } = await runCollectors({ profile: state.profile });
     rotateEvidence(evidence);
     state.raw = raw as Partial<Record<CollectorId, unknown>>;
 
     const res = await resolve({
       enrollHardwareAnchor: opts.enrollHardwareAnchor,
       baseUrl: '',
+      profile: state.profile,
     });
     state.resolve = res;
     state.status = summarizeResolve(res);
@@ -391,6 +409,16 @@ function readJson<T>(key: string): T | null {
   } catch {
     return null;
   }
+}
+
+function loadProfile(): EvidenceProfile {
+  try {
+    const raw = localStorage.getItem(PROFILE_LS_KEY);
+    if (raw === 'stable' || raw === 'full') return raw;
+  } catch {
+    /* ignore */
+  }
+  return DEFAULT_EVIDENCE_PROFILE;
 }
 
 function deleteDatabase(name: string): Promise<void> {

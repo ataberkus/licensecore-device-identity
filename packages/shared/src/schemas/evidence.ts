@@ -1,5 +1,10 @@
 import { z } from 'zod';
-import { COLLECTOR_IDS } from '../constants/collectors.js';
+import {
+  COLLECTOR_IDS,
+  EVIDENCE_PROFILES,
+  PROFILE_COLLECTOR_IDS,
+  type EvidenceProfile,
+} from '../constants/collectors.js';
 import { HASH_HEX_LEN } from '../crypto/hash.js';
 import { SCHEMA_VERSION } from '../constants/thresholds.js';
 
@@ -10,6 +15,14 @@ export const CollectorIdSchema = z.enum(
   COLLECTOR_IDS as unknown as [typeof COLLECTOR_IDS[number], ...typeof COLLECTOR_IDS[number][]],
 );
 export type CollectorId = z.infer<typeof CollectorIdSchema>;
+
+export const EvidenceProfileSchema = z.enum(
+  EVIDENCE_PROFILES as unknown as [
+    (typeof EVIDENCE_PROFILES)[number],
+    ...(typeof EVIDENCE_PROFILES)[number][],
+  ],
+);
+export type { EvidenceProfile };
 
 const hex128 = z
   .string()
@@ -41,22 +54,46 @@ export const IntegrityReportSchema = z.object({
 });
 export type IntegrityReport = z.infer<typeof IntegrityReportSchema>;
 
-const componentHashesShape = Object.fromEntries(
-  COLLECTOR_IDS.map((id) => [id, ComponentHashEntrySchema]),
-) as Record<(typeof COLLECTOR_IDS)[number], typeof ComponentHashEntrySchema>;
+/** Partial map — only keys belonging to the evidence profile are present. */
+export const ComponentHashesSchema = z.record(
+  CollectorIdSchema,
+  ComponentHashEntrySchema,
+);
+export type ComponentHashes = {
+  [K in CollectorId]?: ComponentHashEntry;
+};
 
-export const ComponentHashesSchema = z.object(componentHashesShape);
-export type ComponentHashes = z.infer<typeof ComponentHashesSchema>;
+function exactProfileKeys(
+  profile: EvidenceProfile,
+  hashes: ComponentHashes,
+): boolean {
+  const expected = PROFILE_COLLECTOR_IDS[profile];
+  const keys = Object.keys(hashes) as CollectorId[];
+  if (keys.length !== expected.length) return false;
+  const expectedSet = new Set<string>(expected);
+  return keys.every((k) => expectedSet.has(k));
+}
 
-export const EvidenceBundleSchema = z.object({
-  schemaVersion: z.literal(SCHEMA_VERSION),
-  componentHashes: ComponentHashesSchema,
-  /** hash over sorted S component hs (errors excluded) */
-  stableHash: hex128,
-  /** hash over sorted V component hs */
-  volatileHash: hex128,
-  integrity: IntegrityReportSchema,
-  collectedAtMs: z.number().int().nonnegative(),
-  budgetMs: z.number().positive(),
-});
+export const EvidenceBundleSchema = z
+  .object({
+    schemaVersion: z.literal(SCHEMA_VERSION),
+    profile: EvidenceProfileSchema,
+    componentHashes: ComponentHashesSchema,
+    /** hash over sorted S component hs (errors excluded) */
+    stableHash: hex128,
+    /** hash over sorted V component hs */
+    volatileHash: hex128,
+    integrity: IntegrityReportSchema,
+    collectedAtMs: z.number().int().nonnegative(),
+    budgetMs: z.number().positive(),
+  })
+  .superRefine((val, ctx) => {
+    if (!exactProfileKeys(val.profile, val.componentHashes)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `componentHashes keys must exactly match profile "${val.profile}"`,
+        path: ['componentHashes'],
+      });
+    }
+  });
 export type EvidenceBundle = z.infer<typeof EvidenceBundleSchema>;

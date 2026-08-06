@@ -6,11 +6,19 @@ export {
   COLLECTOR_CLASS,
   S_COLLECTOR_IDS,
   V_COLLECTOR_IDS,
+  EVIDENCE_PROFILES,
+  DEFAULT_EVIDENCE_PROFILE,
+  PROFILE_COLLECTOR_IDS,
   isCollectorId,
   isSCollectorId,
   isVCollectorId,
+  isEvidenceProfile,
 } from './constants/collectors.js';
-export type { SCollectorId, VCollectorId } from './constants/collectors.js';
+export type {
+  SCollectorId,
+  VCollectorId,
+  EvidenceProfile,
+} from './constants/collectors.js';
 
 export { S_WEIGHTS, S_WEIGHTS_SUM } from './constants/weights.js';
 export {
@@ -41,6 +49,7 @@ export { ERROR_CODES } from './errors.js';
 export {
   CollectorClassSchema,
   CollectorIdSchema,
+  EvidenceProfileSchema,
   ComponentHashEntrySchema,
   ComponentHashesSchema,
   IntegrityReportSchema,

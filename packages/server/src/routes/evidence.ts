@@ -28,6 +28,7 @@ export function evidenceRoutes(): Hono<{ Variables: AppVariables }> {
     const rows = await deps.store.listEvidence(id);
     const revisions: EvidenceRevision[] = rows.map((r) => ({
       revision: r.revision,
+      profile: r.profile,
       stableHash: r.stableHash,
       volatileHash: r.volatileHash,
       componentHashes: r.componentHashes,

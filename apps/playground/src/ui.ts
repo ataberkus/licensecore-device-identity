@@ -3,8 +3,8 @@
  * Purpose: prove device_id resolution — no login / seats / license chrome.
  */
 
-import type { EvidenceBundle, IntegrityReport, ResolveResponse } from '@licensecore/shared';
-import { COLLECTOR_IDS, type CollectorId } from '@licensecore/shared/constants/collectors';
+import type { EvidenceBundle, EvidenceProfile, IntegrityReport, ResolveResponse } from '@licensecore/shared';
+import { COLLECTOR_IDS, DEFAULT_EVIDENCE_PROFILE, type CollectorId } from '@licensecore/shared/constants/collectors';
 import { diffEvidence, renderDiffHtml, type EvidenceDiff } from './diff.js';
 import { formatLogLine, loadRunLog, type RunLogEntry } from './log.js';
 
@@ -16,6 +16,7 @@ export interface PlaygroundState {
   lastNonce: string | null;
   busy: boolean;
   status: string;
+  profile: EvidenceProfile;
 }
 
 export type ActionId =
@@ -41,7 +42,11 @@ const ACTIONS: Array<{ id: ActionId; label: string }> = [
   { id: 'export-json', label: 'Export evidence JSON' },
 ];
 
-export function mountShell(root: HTMLElement, onAction: (id: ActionId) => void): void {
+export function mountShell(
+  root: HTMLElement,
+  onAction: (id: ActionId) => void,
+  onProfileChange: (profile: EvidenceProfile) => void,
+): void {
   root.innerHTML = `
     <header class="hero">
       <h1>LicenseCore Device Identity</h1>
@@ -95,6 +100,26 @@ export function mountShell(root: HTMLElement, onAction: (id: ActionId) => void):
 
   const toolbar = root.querySelector('#toolbar');
   if (!toolbar) return;
+
+  const profileLabel = document.createElement('label');
+  profileLabel.className = 'profile-select';
+  profileLabel.innerHTML = `<span>Evidence profile</span>`;
+  const profileSelect = document.createElement('select');
+  profileSelect.id = 'evidenceProfile';
+  for (const p of ['stable', 'full'] as const) {
+    const opt = document.createElement('option');
+    opt.value = p;
+    opt.textContent = p === 'stable' ? 'stable (default)' : 'full';
+    if (p === DEFAULT_EVIDENCE_PROFILE) opt.selected = true;
+    profileSelect.append(opt);
+  }
+  profileSelect.addEventListener('change', () => {
+    const v = profileSelect.value;
+    if (v === 'stable' || v === 'full') onProfileChange(v);
+  });
+  profileLabel.append(profileSelect);
+  toolbar.append(profileLabel);
+
   for (const a of ACTIONS) {
     const btn = document.createElement('button');
     btn.type = 'button';
@@ -142,6 +167,11 @@ export function renderState(root: HTMLElement, state: PlaygroundState): void {
 
   setToolbarDisabled(root, state.busy);
 
+  const profileSelect = root.querySelector('#evidenceProfile');
+  if (profileSelect instanceof HTMLSelectElement) {
+    profileSelect.value = state.profile;
+  }
+
   if (collectorsBody) {
     collectorsBody.innerHTML = renderCollectorRows(state);
   }
@@ -169,6 +199,10 @@ function setToolbarDisabled(root: HTMLElement, busy: boolean): void {
   root.querySelectorAll('#toolbar button').forEach((b) => {
     (b as HTMLButtonElement).disabled = busy;
   });
+  const profileSelect = root.querySelector('#evidenceProfile');
+  if (profileSelect instanceof HTMLSelectElement) {
+    profileSelect.disabled = busy;
+  }
 }
 
 function renderBadges(state: PlaygroundState): string {
@@ -188,6 +222,7 @@ function renderBadges(state: PlaygroundState): string {
     parts.push(badge(`nonce ${state.lastNonce.slice(0, 8)}…`, 'muted'));
   }
   if (state.evidence) {
+    parts.push(badge(`profile ${state.evidence.profile}`, 'muted'));
     parts.push(badge(`stable ${state.evidence.stableHash.slice(0, 8)}…`, 'muted'));
   }
   return parts.join('');
@@ -207,18 +242,21 @@ function renderCollectorRows(state: PlaygroundState): string {
   const hashes = state.evidence?.componentHashes;
   return COLLECTOR_IDS.map((id) => {
     const entry = hashes?.[id];
-    const preview = previewValue(state.raw[id], Boolean(entry?.error));
-    const cls = entry?.class ?? '—';
-    const hash = entry?.h ?? '—';
+    const skipped = hashes != null && entry === undefined;
+    const preview = skipped
+      ? '(skipped)'
+      : previewValue(state.raw[id], Boolean(entry?.error));
+    const cls = entry?.class ?? (skipped ? '—' : '—');
+    const hash = entry?.h ?? (skipped ? '—' : '—');
     const ms = entry?.ms != null ? String(entry.ms) : '—';
     const err = entry?.error ? 'true' : '';
-    return `<tr class="${err ? 'err' : ''}">
+    return `<tr class="${err ? 'err' : skipped ? 'skipped' : ''}">
       <td class="mono">${esc(id)}</td>
       <td><span class="cls">${esc(String(cls))}</span></td>
       <td class="preview mono">${esc(preview)}</td>
       <td class="mono hash">${esc(hash)}</td>
       <td>${esc(ms)}</td>
-      <td>${err ? '⚠' : ''}</td>
+      <td>${err ? '⚠' : skipped ? '·' : ''}</td>
     </tr>`;
   }).join('');
 }

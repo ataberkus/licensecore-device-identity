@@ -143,6 +143,33 @@ body {
   cursor: not-allowed;
 }
 
+.toolbar .profile-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.9rem;
+  color: var(--muted);
+  padding: 0.35rem 0.55rem;
+  border: 1px solid var(--line);
+  background: #fff;
+}
+
+.toolbar .profile-select select {
+  font: inherit;
+  font-size: 0.9rem;
+  border: 1px solid var(--line);
+  background: #fff;
+  padding: 0.2rem 0.35rem;
+}
+
+.toolbar .profile-select select:disabled {
+  opacity: 0.55;
+}
+
+table.data tr.skipped {
+  opacity: 0.55;
+}
+
 .panel {
   background: var(--panel);
   border: 1px solid var(--line);

@@ -40,6 +40,7 @@ CREATE TABLE IF NOT EXISTS device_evidence (
   id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
   device_id TEXT NOT NULL REFERENCES devices(id),
   revision INTEGER NOT NULL,
+  profile TEXT NOT NULL DEFAULT 'full',
   stable_hash TEXT NOT NULL,
   stable_hash_prefix TEXT NOT NULL,
   volatile_hash TEXT NOT NULL,
@@ -81,6 +82,21 @@ function repoMigrationsDir(): string {
 
 export function migrateSqlite(app: Extract<AppDb, { dialect: 'sqlite' }>): void {
   app.sqlite.exec(SQLITE_DDL);
+  ensureSqliteEvidenceProfileColumn(app.sqlite);
+}
+
+function ensureSqliteEvidenceProfileColumn(sqlite: {
+  prepare: (sql: string) => { all: () => unknown[] };
+  exec: (sql: string) => void;
+}): void {
+  const cols = sqlite.prepare(`PRAGMA table_info(device_evidence)`).all() as Array<{
+    name: string;
+  }>;
+  if (!cols.some((c) => c.name === 'profile')) {
+    sqlite.exec(
+      `ALTER TABLE device_evidence ADD COLUMN profile TEXT NOT NULL DEFAULT 'full'`,
+    );
+  }
 }
 
 export async function migratePostgres(
@@ -94,6 +110,9 @@ export async function migratePostgres(
       'utf8',
     );
   await app.sql.unsafe(text);
+  await app.sql.unsafe(
+    `ALTER TABLE device_evidence ADD COLUMN IF NOT EXISTS profile TEXT NOT NULL DEFAULT 'full'`,
+  );
 }
 
 /** Sync store factory (sqlite / memory). Prefer createStoreAsync for postgres. */

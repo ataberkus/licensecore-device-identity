@@ -8,6 +8,7 @@ import type {
   ComponentHashes,
   Confidence,
   DeviceEventType,
+  EvidenceProfile,
   IntegrityReport,
   ServerSignals,
 } from '@licensecore/shared';
@@ -34,6 +35,8 @@ export type EvidenceRecord = {
   id: number;
   deviceId: string;
   revision: number;
+  /** Legacy rows without a stored profile are treated as `full`. */
+  profile: EvidenceProfile;
   stableHash: string;
   stableHashPrefix: string;
   volatileHash: string;
@@ -80,6 +83,7 @@ export type InsertAnchor = {
 export type InsertEvidence = {
   deviceId: string;
   revision: number;
+  profile: EvidenceProfile;
   stableHash: string;
   volatileHash: string;
   componentHashes: ComponentHashes;
@@ -104,11 +108,12 @@ export interface DeviceStore {
   latestEvidence(deviceId: string): Promise<EvidenceRecord | null>;
   /**
    * Candidate search: evidence in last 180d matching same ASN
-   * OR same stableHash 8-hex prefix. Never full-scan.
+   * OR same stableHash 8-hex prefix, same evidence profile. Never full-scan.
    */
   findCandidates(opts: {
     asn: number | null | undefined;
     stableHash: string;
+    profile: EvidenceProfile;
     nowMs?: number;
   }): Promise<CandidateEvidence[]>;
   insertDevice(row: InsertDevice): Promise<DeviceRecord>;
@@ -151,4 +156,12 @@ export function lookbackCutoffIso(nowMs: number = Date.now()): string {
 
 export function nowIso(nowMs: number = Date.now()): string {
   return new Date(nowMs).toISOString();
+}
+
+/** Legacy DB rows without profile are treated as `full`. */
+export function coerceEvidenceProfile(
+  value: string | null | undefined,
+): EvidenceProfile {
+  if (value === 'stable' || value === 'full') return value;
+  return 'full';
 }

@@ -70,3 +70,22 @@ export function isVCollectorId(id: string): id is VCollectorId {
 export function isCollectorId(id: string): id is CollectorId {
   return (COLLECTOR_IDS as readonly string[]).includes(id);
 }
+
+/** Named collector sets for evidence collection / same-profile matching. */
+export const EVIDENCE_PROFILES = ['full', 'stable'] as const;
+export type EvidenceProfile = (typeof EVIDENCE_PROFILES)[number];
+
+/** Product default — all S except font_metrics; no V. */
+export const DEFAULT_EVIDENCE_PROFILE: EvidenceProfile = 'stable';
+
+/** `stable` = CLASS-S minus font_metrics; `full` = every registered collector. */
+export const PROFILE_COLLECTOR_IDS: Readonly<
+  Record<EvidenceProfile, readonly CollectorId[]>
+> = {
+  full: COLLECTOR_IDS,
+  stable: S_COLLECTOR_IDS.filter((id) => id !== 'font_metrics'),
+};
+
+export function isEvidenceProfile(value: string): value is EvidenceProfile {
+  return (EVIDENCE_PROFILES as readonly string[]).includes(value);
+}

@@ -5,10 +5,12 @@ import {
   sign,
 } from 'node:crypto';
 import {
-  COLLECTOR_IDS,
+  COLLECTOR_CLASS,
+  PROFILE_COLLECTOR_IDS,
   S_COLLECTOR_IDS,
   type ComponentHashes,
   type EvidenceBundle,
+  type EvidenceProfile,
   type IntegrityReport,
   type ResolveRequest,
   type ServerSignals,
@@ -35,16 +37,17 @@ export function emptyIntegrity(
 export function makeComponentHashes(
   seed: string,
   mutate?: Partial<Record<string, string>>,
+  profile: EvidenceProfile = 'full',
 ): ComponentHashes {
-  const out = {} as ComponentHashes;
-  for (const id of COLLECTOR_IDS) {
+  const out: ComponentHashes = {};
+  for (const id of PROFILE_COLLECTOR_IDS[profile]) {
     const h = createHash('sha256')
       .update(`${seed}:${id}`)
       .digest('hex')
       .slice(0, 32);
     out[id] = {
       h: mutate?.[id] ?? h,
-      class: (S_COLLECTOR_IDS as readonly string[]).includes(id) ? 'S' : 'V',
+      class: COLLECTOR_CLASS[id],
     };
   }
   return out;
@@ -67,10 +70,12 @@ export function stableHashFrom(components: ComponentHashes): string {
 export function makeEvidence(
   seed: string,
   integrity?: Partial<IntegrityReport>,
+  profile: EvidenceProfile = 'full',
 ): EvidenceBundle {
-  const componentHashes = makeComponentHashes(seed);
+  const componentHashes = makeComponentHashes(seed, undefined, profile);
   return {
     schemaVersion: 1,
+    profile,
     componentHashes,
     stableHash: stableHashFrom(componentHashes),
     volatileHash: createHash('sha256')

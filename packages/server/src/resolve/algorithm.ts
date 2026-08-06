@@ -135,6 +135,7 @@ export async function runResolve(
           await deps.store.insertEvidence({
             deviceId: device.id,
             revision: rev,
+            profile: req.evidence.profile,
             stableHash: req.evidence.stableHash,
             volatileHash: req.evidence.volatileHash,
             componentHashes: req.evidence.componentHashes,
@@ -155,6 +156,7 @@ export async function runResolve(
         await deps.store.insertEvidence({
           deviceId: device.id,
           revision: 1,
+          profile: req.evidence.profile,
           stableHash: req.evidence.stableHash,
           volatileHash: req.evidence.volatileHash,
           componentHashes: req.evidence.componentHashes,
@@ -211,6 +213,7 @@ export async function runResolve(
   const candidates = await deps.store.findCandidates({
     asn: serverSignals.asn,
     stableHash: req.evidence.stableHash,
+    profile: req.evidence.profile,
     nowMs,
   });
 
@@ -246,6 +249,7 @@ export async function runResolve(
     await deps.store.insertEvidence({
       deviceId,
       revision: rev,
+      profile: req.evidence.profile,
       stableHash: req.evidence.stableHash,
       volatileHash: req.evidence.volatileHash,
       componentHashes: req.evidence.componentHashes,
@@ -322,6 +326,7 @@ export async function runResolve(
   await deps.store.insertEvidence({
     deviceId,
     revision: 1,
+    profile: req.evidence.profile,
     stableHash: req.evidence.stableHash,
     volatileHash: req.evidence.volatileHash,
     componentHashes: req.evidence.componentHashes,

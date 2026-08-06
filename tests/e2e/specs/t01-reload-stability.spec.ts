@@ -3,6 +3,7 @@ import {
   expect,
   gotoHarness,
   diResolve,
+  diCollect,
 } from '../fixtures/harness';
 
 test.describe('T1 reload stability', () => {
@@ -11,6 +12,12 @@ test.describe('T1 reload stability', () => {
     const first = await diResolve(page);
     expect(first.deviceId).toBeTruthy();
     expect(first.anchorTier).toBeLessThanOrEqual(2);
+
+    const evidence = await diCollect(page);
+    expect(evidence.profile).toBe('stable');
+    expect(evidence.componentHashes.font_metrics).toBeUndefined();
+    expect(evidence.componentHashes.ua_string).toBeUndefined();
+    expect(evidence.componentHashes.math_fp).toBeDefined();
 
     for (let i = 0; i < 24; i++) {
       await page.reload({ waitUntil: 'domcontentloaded' });

@@ -12,16 +12,22 @@ import {
   runCollectors,
   wipeLocalState,
 } from '@licensecore/client';
-import type { EvidenceBundle, ResolveRequest, ResolveResponse } from '@licensecore/shared';
+import type { EvidenceBundle, EvidenceProfile, ResolveRequest, ResolveResponse } from '@licensecore/shared';
 
 const IDB_NAME = 'licensecore-device-identity';
 
 export type DiHarness = {
   ready: true;
   origin: string;
-  resolve: (opts?: { enrollHardwareAnchor?: boolean; budgetMs?: number }) => Promise<ResolveResponse>;
-  collect: () => Promise<EvidenceBundle>;
-  runCollectors: () => Promise<{ evidence: EvidenceBundle; raw: Record<string, unknown> }>;
+  resolve: (opts?: {
+    enrollHardwareAnchor?: boolean;
+    budgetMs?: number;
+    profile?: EvidenceProfile;
+  }) => Promise<ResolveResponse>;
+  collect: (opts?: { profile?: EvidenceProfile }) => Promise<EvidenceBundle>;
+  runCollectors: (opts?: {
+    profile?: EvidenceProfile;
+  }) => Promise<{ evidence: EvidenceBundle; raw: Record<string, unknown> }>;
   wipeAnchors: () => Promise<void>;
   wipeAllSiteData: () => Promise<void>;
   clearCookiesAndLocalStorage: () => Promise<void>;
@@ -373,6 +379,7 @@ const harness: DiHarness = {
         baseUrl: '',
         enrollHardwareAnchor: opts.enrollHardwareAnchor === true,
         ...(opts.budgetMs !== undefined ? { budgetMs: opts.budgetMs } : {}),
+        ...(opts.profile !== undefined ? { profile: opts.profile } : {}),
       });
     } catch (err) {
       harness.lastError =
@@ -384,9 +391,9 @@ const harness: DiHarness = {
       throw err;
     }
   },
-  collect,
-  async runCollectors() {
-    const out = await runCollectors();
+  collect: (opts) => collect(opts),
+  async runCollectors(opts = {}) {
+    const out = await runCollectors(opts);
     return { evidence: out.evidence, raw: out.raw as Record<string, unknown> };
   },
   wipeAnchors: wipeLocalState,

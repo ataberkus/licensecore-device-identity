@@ -1,6 +1,7 @@
 import type {
   CollectorClass,
   CollectorId,
+  EvidenceProfile,
 } from '@licensecore/shared/constants/collectors';
 
 /** Raw value produced by a collector before hashing. Must be JSON-serializable. */
@@ -19,6 +20,8 @@ export interface CollectorDefinition {
 export interface RunCollectorsOptions {
   /** Hard wall-clock budget; defaults to COLLECTION_BUDGET_MS. */
   budgetMs?: number;
+  /** Collector set; defaults to DEFAULT_EVIDENCE_PROFILE (`stable`). */
+  profile?: EvidenceProfile;
 }
 
 export interface IntegrityExtras {

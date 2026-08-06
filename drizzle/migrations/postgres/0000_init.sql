@@ -34,6 +34,7 @@ CREATE TABLE IF NOT EXISTS device_evidence (
   id SERIAL PRIMARY KEY,
   device_id TEXT NOT NULL REFERENCES devices(id),
   revision INTEGER NOT NULL,
+  profile TEXT NOT NULL DEFAULT 'full',
   stable_hash TEXT NOT NULL,
   stable_hash_prefix TEXT NOT NULL,
   volatile_hash TEXT NOT NULL,

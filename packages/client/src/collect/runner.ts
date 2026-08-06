@@ -1,6 +1,7 @@
 import {
   COLLECTOR_CLASS,
-  COLLECTOR_IDS,
+  DEFAULT_EVIDENCE_PROFILE,
+  PROFILE_COLLECTOR_IDS,
   type CollectorId,
 } from '@licensecore/shared/constants/collectors';
 import {
@@ -31,22 +32,28 @@ export interface RunCollectorsResult {
  * - Hard wall-clock budget (default 400ms)
  * - Throw/timeout ⇒ `{ error: true }` with deterministic error hash
  * - Partial results OK
+ * - Only collectors in the selected evidence profile are run/seeded
  */
 export async function runCollectors(
   options: RunCollectorsOptions = {},
   collectors: readonly CollectorDefinition[] = ALL_COLLECTORS,
 ): Promise<RunCollectorsResult> {
   const budgetMs = options.budgetMs ?? COLLECTION_BUDGET_MS;
+  const profile = options.profile ?? DEFAULT_EVIDENCE_PROFILE;
+  const profileIds = PROFILE_COLLECTOR_IDS[profile];
+  const profileIdSet = new Set<string>(profileIds);
+  const activeCollectors = collectors.filter((c) => profileIdSet.has(c.id));
+
   const startedAt = now();
   const deadline = startedAt + budgetMs;
 
-  const componentHashes = {} as Record<CollectorId, ComponentHashEntry>;
+  const componentHashes: ComponentHashes = {};
   const raw: Partial<Record<CollectorId, unknown>> = {};
 
-  // Seed all ids so ComponentHashes is complete even if registry is filtered in tests
+  // Seed only profile ids (no padding for collectors outside the profile)
   const errorHash = await hashCollectorValue(ERROR_HASH_SOURCE);
 
-  for (const id of COLLECTOR_IDS) {
+  for (const id of profileIds) {
     componentHashes[id] = {
       h: errorHash,
       class: COLLECTOR_CLASS[id],
@@ -54,7 +61,7 @@ export async function runCollectors(
     };
   }
 
-  for (const def of collectors) {
+  for (const def of activeCollectors) {
     const remaining = deadline - now();
     if (remaining <= 0) {
       // Budget exhausted — leave remaining as error entries
@@ -94,7 +101,7 @@ export async function runCollectors(
 
   const stableEntries: Array<[string, string]> = [];
   const volatileEntries: Array<[string, string]> = [];
-  for (const id of COLLECTOR_IDS) {
+  for (const id of profileIds) {
     const entry = componentHashes[id];
     if (!entry || entry.error) continue;
     if (entry.class === 'S') stableEntries.push([id, entry.h]);
@@ -106,7 +113,8 @@ export async function runCollectors(
 
   const evidence: EvidenceBundle = {
     schemaVersion: SCHEMA_VERSION,
-    componentHashes: componentHashes as ComponentHashes,
+    profile,
+    componentHashes,
     stableHash,
     volatileHash,
     integrity,

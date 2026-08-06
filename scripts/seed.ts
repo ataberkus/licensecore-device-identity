@@ -79,6 +79,7 @@ async function main(): Promise<void> {
   await store.insertEvidence({
     deviceId: idA,
     revision: 1,
+    profile: 'full',
     stableHash: stableA,
     volatileHash: volatileA,
     componentHashes: componentsA,
@@ -112,6 +113,7 @@ async function main(): Promise<void> {
   await store.insertEvidence({
     deviceId: idB,
     revision: 1,
+    profile: 'full',
     stableHash: stableB,
     volatileHash: volatileB,
     componentHashes: componentsB,
@@ -154,6 +156,7 @@ async function main(): Promise<void> {
   await store.insertEvidence({
     deviceId: idC,
     revision: 1,
+    profile: 'full',
     stableHash: stableC,
     volatileHash: volatileC,
     componentHashes: componentsC,

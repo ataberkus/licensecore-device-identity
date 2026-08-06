@@ -20,6 +20,7 @@ import type {
   ComponentHashes,
   Confidence,
   DeviceEventType,
+  EvidenceProfile,
   IntegrityReport,
   ServerSignals,
 } from '@licensecore/shared';
@@ -77,6 +78,8 @@ export const deviceEvidence = sqliteTable(
       .notNull()
       .references(() => devices.id),
     revision: integer('revision').notNull(),
+    /** Evidence profile; legacy rows without value are coerced to `full`. */
+    profile: text('profile').$type<EvidenceProfile>().notNull().default('full'),
     stableHash: text('stable_hash').notNull(),
     /** First 8 hex of stableHash — candidate bucket index. */
     stableHashPrefix: text('stable_hash_prefix').notNull(),

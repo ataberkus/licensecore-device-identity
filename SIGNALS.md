@@ -2,10 +2,19 @@
 
 Source of truth: `packages/client/src/collect/collectors/*`, weights in `packages/shared/src/constants/weights.ts`, timeouts in `packages/client/src/collect/collectors/index.ts`.
 
+**Evidence profiles** (`packages/shared/src/constants/collectors.ts`)
+
+| Profile | Default | Collectors |
+|---------|---------|------------|
+| `stable` | **yes** | All CLASS-S except `font_metrics`; no CLASS-V |
+| `full` | opt-in | Every registered S + V collector (including `font_metrics`) |
+
+`componentHashes` is a **partial** map: only keys for the selected profile are present (no synthetic `error` padding for skipped collectors). Server matching is **same-profile only**; legacy DB rows without `profile` are treated as `full`.
+
 **Classes**
 
 - **S (stable):** enters `stableHash` and weighted match / rebind / drift. `error: true` excluded from score numerator and denominator.
-- **V (volatile):** enters `volatileHash` only — ignored for identity match (resize, language, UA string bumps, etc.).
+- **V (volatile):** enters `volatileHash` only — ignored for identity match (resize, language, UA string bumps, etc.). Absent under the `stable` profile.
 
 **Hashing:** each collector value → canonical JSON → SHA-256 truncated to **128-bit hex** (`h`). Aggregates = sorted `id=h` lines → same truncate.
 
@@ -28,7 +37,7 @@ Source of truth: `packages/client/src/collect/collectors/*`, weights in `package
 | `ua_ch_high` | 0.09 | 50ms | UA-CH brands/mobile/platform + high-entropy **architecture, bitness, model, platformVersion, formFactors, wow64** — **excludes** `fullVersionList` / full UA version | Stable client platform without patch-level churn (T11) | No `userAgentData` (Firefox/Safari) → degraded payload; platformVersion OS bumps |
 | `display` | 0.05 | 20ms | Screen width/height/avail, color/pixel depth, `devicePixelRatio`, orientation | Monitor configuration | External monitor plug; DPI/zoom affecting DPR; orientation |
 | `media_hw_decode` | 0.06 | 40ms | `canPlayType` / MSE `isTypeSupported` for fixed codec list | Codec capability set | Browser codec pack changes; OS media components |
-| `font_metrics` | 0.09 | 60ms | `measureText` widths for a fixed font list vs monospace baseline (**no** `queryLocalFonts`) | Installed-font proxy without permission prompts | Font install/uninstall; emoji font diffs; canvas privacy |
+| `font_metrics` | 0.09 | 60ms | `measureText` widths for a fixed font list vs monospace baseline (**no** `queryLocalFonts`) | Installed-font proxy without permission prompts — **full profile only** | Font install/uninstall; emoji font diffs; canvas privacy |
 | `math_fp` | 0.05 | 20ms | Fixed transcendental/`Math.*` probe set | JS engine / libc math fingerprint | Engine version upgrades |
 | `storage_quota` | 0.04 | 50ms | `navigator.storage.estimate()` quota/usage + `persisted()` | Origin storage policy / disk pressure proxy | Quota changes with free disk; private mode differences |
 | `timing_profile` | 0.04 | 25ms | Micro-benchmark ops/median/p90 within **25ms** wall cap | Scheduler / CPU speed hint | Thermal throttle, CPU contention, DevTools throttling — noisy by nature |
@@ -36,6 +45,8 @@ Source of truth: `packages/client/src/collect/collectors/*`, weights in `package
 ---
 
 ## CLASS V (not used in match)
+
+Present only under the `full` profile.
 
 | ID | Timeout | What is collected | Why (diagnostics / volatileHash) | Known instability |
 |---|---:|---|---|---|

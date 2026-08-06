@@ -7,6 +7,7 @@
 
 import type {
   EvidenceBundle,
+  EvidenceProfile,
   ResolveResponse,
   ReverifyResponse,
 } from '@licensecore/shared';
@@ -51,6 +52,8 @@ export interface ResolveFlowOptions extends TransportOptions {
   origin?: string;
   /** Collector budget override. */
   budgetMs?: number;
+  /** Evidence profile; defaults to `stable`. */
+  profile?: EvidenceProfile;
   /** Include Tier 2 SPKI (first enroll). Default: true when no prior key known to caller. */
   includeSpki?: boolean;
 }
@@ -72,6 +75,7 @@ export async function resolve(
   const challenge = await fetchChallenge(origin, options);
   const collectOpts: CollectOptions = {};
   if (options.budgetMs !== undefined) collectOpts.budgetMs = options.budgetMs;
+  if (options.profile !== undefined) collectOpts.profile = options.profile;
   const evidence = await collect(collectOpts);
   const anchor = await obtainAnchorProof(
     {
@@ -142,6 +146,8 @@ export async function reverify(
 
 export interface DeviceIdentityClientOptions extends TransportOptions {
   enrollHardwareAnchor?: boolean;
+  /** Default evidence profile for collect/resolve. */
+  profile?: EvidenceProfile;
 }
 
 /** Convenience facade. */
@@ -153,7 +159,11 @@ export class DeviceIdentityClient {
   }
 
   collect(options?: CollectOptions): Promise<EvidenceBundle> {
-    return collect(options);
+    const merged: CollectOptions = { ...options };
+    if (merged.profile === undefined && this.opts.profile !== undefined) {
+      merged.profile = this.opts.profile;
+    }
+    return collect(merged);
   }
 
   resolve(options?: Omit<ResolveFlowOptions, keyof TransportOptions>): Promise<ResolveResponse> {

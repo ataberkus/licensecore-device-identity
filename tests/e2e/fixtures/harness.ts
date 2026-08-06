@@ -27,6 +27,7 @@ export type ResolveResult = {
 };
 
 export type EvidenceResult = {
+  profile: string;
   stableHash: string;
   volatileHash: string;
   budgetMs: number;
@@ -76,7 +77,11 @@ export async function gotoHarness(page: Page): Promise<void> {
 
 export async function diResolve(
   page: Page,
-  opts?: { enrollHardwareAnchor?: boolean; budgetMs?: number },
+  opts?: {
+    enrollHardwareAnchor?: boolean;
+    budgetMs?: number;
+    profile?: 'stable' | 'full';
+  },
 ): Promise<ResolveResult> {
   return page.evaluate(async (o) => {
     const di = (
@@ -85,6 +90,7 @@ export async function diResolve(
           resolve: (opts?: {
             enrollHardwareAnchor?: boolean;
             budgetMs?: number;
+            profile?: 'stable' | 'full';
           }) => Promise<ResolveResult>;
         };
       }
@@ -93,13 +99,22 @@ export async function diResolve(
   }, opts ?? {});
 }
 
-export async function diCollect(page: Page): Promise<EvidenceResult> {
-  return page.evaluate(async () => {
+export async function diCollect(
+  page: Page,
+  opts?: { profile?: 'stable' | 'full' },
+): Promise<EvidenceResult> {
+  return page.evaluate(async (o) => {
     const di = (
-      window as unknown as { __DI: { collect: () => Promise<EvidenceResult> } }
+      window as unknown as {
+        __DI: {
+          collect: (opts?: {
+            profile?: 'stable' | 'full';
+          }) => Promise<EvidenceResult>;
+        };
+      }
     ).__DI;
-    return di.collect();
-  });
+    return di.collect(o);
+  }, opts);
 }
 
 export async function diWipeAll(page: Page): Promise<void> {

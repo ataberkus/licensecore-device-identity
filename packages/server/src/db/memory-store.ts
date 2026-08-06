@@ -9,7 +9,13 @@ import type {
   InsertEvidence,
   InsertEvent,
 } from './store.js';
-import { lookbackCutoffIso, nowIso, stableHashPrefix } from './store.js';
+import {
+  coerceEvidenceProfile,
+  lookbackCutoffIso,
+  nowIso,
+  stableHashPrefix,
+} from './store.js';
+import type { EvidenceProfile } from '@licensecore/shared';
 
 /**
  * In-memory DeviceStore for unit tests and ephemeral local runs.
@@ -47,6 +53,7 @@ export class MemoryDeviceStore implements DeviceStore {
   async findCandidates(opts: {
     asn: number | null | undefined;
     stableHash: string;
+    profile: EvidenceProfile;
     nowMs?: number;
   }): Promise<CandidateEvidence[]> {
     const cutoff = lookbackCutoffIso(opts.nowMs);
@@ -55,6 +62,7 @@ export class MemoryDeviceStore implements DeviceStore {
 
     for (const e of this.evidence) {
       if (e.createdAt < cutoff) continue;
+      if (coerceEvidenceProfile(e.profile) !== opts.profile) continue;
       const asnMatch =
         opts.asn != null && e.asn != null && e.asn === opts.asn;
       const prefixMatch = e.stableHashPrefix === prefix;
@@ -148,6 +156,7 @@ export class MemoryDeviceStore implements DeviceStore {
       id: this.evidenceSeq++,
       deviceId: row.deviceId,
       revision: row.revision,
+      profile: row.profile,
       stableHash: row.stableHash,
       stableHashPrefix: stableHashPrefix(row.stableHash),
       volatileHash: row.volatileHash,
