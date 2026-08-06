@@ -15,7 +15,7 @@ import type {
 export type DeviceIdentityStatus = 'idle' | 'loading' | 'ready' | 'error';
 
 export interface UseDeviceIdentityOptions extends DeviceIdentityClientOptions {
-  /** When true (default), call resolve() once on mount. */
+  /** When true (default), call resolve() once on mount / when client options change. */
   autoResolve?: boolean;
 }
 
@@ -48,11 +48,25 @@ export function useDeviceIdentity(
 ): UseDeviceIdentityResult {
   const autoResolve = options.autoResolve !== false;
   const clientOpts = clientOptsFrom(options);
-  const clientRef = useRef<DeviceIdentityClient | null>(null);
+  const clientRef = useRef(new DeviceIdentityClient(clientOpts));
+  const mountedRef = useRef(true);
 
-  if (clientRef.current === null) {
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  // Keep DeviceIdentityClient in sync when transport / profile options change.
+  useEffect(() => {
     clientRef.current = new DeviceIdentityClient(clientOpts);
-  }
+  }, [
+    clientOpts.baseUrl,
+    clientOpts.profile,
+    clientOpts.enrollHardwareAnchor,
+    clientOpts.fetch,
+  ]);
 
   const [status, setStatus] = useState<DeviceIdentityStatus>(
     autoResolve ? 'loading' : 'idle',
@@ -67,16 +81,22 @@ export function useDeviceIdentity(
         keyof DeviceIdentityClientOptions
       >,
     ): Promise<ResolveResponse> => {
-      setStatus('loading');
-      setError(null);
+      if (mountedRef.current) {
+        setStatus('loading');
+        setError(null);
+      }
       try {
-        const next = await clientRef.current!.resolve(resolveOptions);
-        setResult(next);
-        setStatus('ready');
+        const next = await clientRef.current.resolve(resolveOptions);
+        if (mountedRef.current) {
+          setResult(next);
+          setStatus('ready');
+        }
         return next;
       } catch (err) {
-        setError(err);
-        setStatus('error');
+        if (mountedRef.current) {
+          setError(err);
+          setStatus('error');
+        }
         throw err;
       }
     },
@@ -90,24 +110,30 @@ export function useDeviceIdentity(
         keyof DeviceIdentityClientOptions
       >,
     ): Promise<ReverifyResponse> => {
-      setStatus('loading');
-      setError(null);
+      if (mountedRef.current) {
+        setStatus('loading');
+        setError(null);
+      }
       try {
-        const next = await clientRef.current!.reverify(reverifyOptions);
-        setResult((prev) =>
-          prev
-            ? {
-                ...prev,
-                deviceId: next.deviceId,
-                deviceToken: next.deviceToken,
-              }
-            : null,
-        );
-        setStatus('ready');
+        const next = await clientRef.current.reverify(reverifyOptions);
+        if (mountedRef.current) {
+          setResult((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  deviceId: next.deviceId,
+                  deviceToken: next.deviceToken,
+                }
+              : null,
+          );
+          setStatus('ready');
+        }
         return next;
       } catch (err) {
-        setError(err);
-        setStatus('error');
+        if (mountedRef.current) {
+          setError(err);
+          setStatus('error');
+        }
         throw err;
       }
     },
@@ -116,17 +142,17 @@ export function useDeviceIdentity(
 
   const collect = useCallback(
     (collectOptions?: CollectOptions): Promise<EvidenceBundle> => {
-      return clientRef.current!.collect(collectOptions);
+      return clientRef.current.collect(collectOptions);
     },
     [],
   );
 
   const wipeAnchors = useCallback((): Promise<void> => {
-    return clientRef.current!.wipeAnchors();
+    return clientRef.current.wipeAnchors();
   }, []);
 
   const wipeLocalState = useCallback((): Promise<void> => {
-    return clientRef.current!.wipeLocalState();
+    return clientRef.current.wipeLocalState();
   }, []);
 
   useEffect(() => {
@@ -134,25 +160,28 @@ export function useDeviceIdentity(
     let cancelled = false;
     setStatus('loading');
     setError(null);
-    void clientRef
-      .current!.resolve()
+    void clientRef.current
+      .resolve()
       .then((next) => {
-        if (cancelled) return;
+        if (cancelled || !mountedRef.current) return;
         setResult(next);
         setStatus('ready');
       })
       .catch((err: unknown) => {
-        if (cancelled) return;
+        if (cancelled || !mountedRef.current) return;
         setError(err);
         setStatus('error');
       });
     return () => {
       cancelled = true;
     };
-    // Intentionally once on mount for default autoResolve; options.baseUrl etc.
-    // are captured into the client constructed on first render.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoResolve]);
+  }, [
+    autoResolve,
+    clientOpts.baseUrl,
+    clientOpts.profile,
+    clientOpts.enrollHardwareAnchor,
+    clientOpts.fetch,
+  ]);
 
   const deviceId = result?.deviceId ?? null;
   const deviceToken = result?.deviceToken ?? null;

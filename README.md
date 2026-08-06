@@ -330,6 +330,7 @@ import { useDeviceIdentity } from '@licensecore/vue';
 const { status, deviceId, error, reverify, resolve } = useDeviceIdentity({
   baseUrl: '',
 });
+// Reactive options: useDeviceIdentity(() => ({ baseUrl: apiUrl.value }))
 </script>
 
 <template>

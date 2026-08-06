@@ -1,4 +1,12 @@
-import { computed, onMounted, onUnmounted, ref, shallowRef } from 'vue';
+import {
+  computed,
+  onUnmounted,
+  ref,
+  shallowRef,
+  toValue,
+  watch,
+  type MaybeRefOrGetter,
+} from 'vue';
 import {
   DeviceIdentityClient,
   type CollectOptions,
@@ -15,7 +23,7 @@ import type {
 export type DeviceIdentityStatus = 'idle' | 'loading' | 'ready' | 'error';
 
 export interface UseDeviceIdentityOptions extends DeviceIdentityClientOptions {
-  /** When true (default), call resolve() once on mount. */
+  /** When true (default), call resolve() on setup / when client options change. */
   autoResolve?: boolean;
 }
 
@@ -26,11 +34,21 @@ function clientOptsFrom(
   return rest;
 }
 
-export function useDeviceIdentity(options: UseDeviceIdentityOptions = {}) {
-  const autoResolve = options.autoResolve !== false;
-  const client = new DeviceIdentityClient(clientOptsFrom(options));
+/**
+ * @param options Plain object, ref, or getter. Use a getter/computed when
+ * `baseUrl` (etc.) should stay reactive, e.g. `() => ({ baseUrl: url.value })`.
+ */
+export function useDeviceIdentity(
+  options: MaybeRefOrGetter<UseDeviceIdentityOptions> = {},
+) {
+  const readOptions = (): UseDeviceIdentityOptions => toValue(options);
+  const readClientOpts = (): DeviceIdentityClientOptions =>
+    clientOptsFrom(readOptions());
 
-  const status = ref<DeviceIdentityStatus>(autoResolve ? 'loading' : 'idle');
+  const client = shallowRef(new DeviceIdentityClient(readClientOpts()));
+  const status = ref<DeviceIdentityStatus>(
+    readOptions().autoResolve !== false ? 'loading' : 'idle',
+  );
   const result = shallowRef<ResolveResponse | null>(null);
   const error = shallowRef<unknown>(null);
   let alive = true;
@@ -45,10 +63,12 @@ export function useDeviceIdentity(options: UseDeviceIdentityOptions = {}) {
       keyof DeviceIdentityClientOptions
     >,
   ): Promise<ResolveResponse> {
-    status.value = 'loading';
-    error.value = null;
+    if (alive) {
+      status.value = 'loading';
+      error.value = null;
+    }
     try {
-      const next = await client.resolve(resolveOptions);
+      const next = await client.value.resolve(resolveOptions);
       if (alive) {
         result.value = next;
         status.value = 'ready';
@@ -69,10 +89,12 @@ export function useDeviceIdentity(options: UseDeviceIdentityOptions = {}) {
       keyof DeviceIdentityClientOptions
     >,
   ): Promise<ReverifyResponse> {
-    status.value = 'loading';
-    error.value = null;
+    if (alive) {
+      status.value = 'loading';
+      error.value = null;
+    }
     try {
-      const next = await client.reverify(reverifyOptions);
+      const next = await client.value.reverify(reverifyOptions);
       if (alive) {
         if (result.value) {
           result.value = {
@@ -94,23 +116,37 @@ export function useDeviceIdentity(options: UseDeviceIdentityOptions = {}) {
   }
 
   function collect(collectOptions?: CollectOptions): Promise<EvidenceBundle> {
-    return client.collect(collectOptions);
+    return client.value.collect(collectOptions);
   }
 
   function wipeAnchors(): Promise<void> {
-    return client.wipeAnchors();
+    return client.value.wipeAnchors();
   }
 
   function wipeLocalState(): Promise<void> {
-    return client.wipeLocalState();
+    return client.value.wipeLocalState();
   }
 
-  onMounted(() => {
-    if (!autoResolve) return;
-    void resolve().catch(() => {
-      /* status/error already set */
-    });
-  });
+  watch(
+    () => {
+      const o = readOptions();
+      return {
+        autoResolve: o.autoResolve !== false,
+        baseUrl: o.baseUrl,
+        profile: o.profile,
+        enrollHardwareAnchor: o.enrollHardwareAnchor,
+        fetch: o.fetch,
+      } as const;
+    },
+    (curr) => {
+      client.value = new DeviceIdentityClient(readClientOpts());
+      if (!curr.autoResolve) return;
+      void resolve().catch(() => {
+        /* status/error already set */
+      });
+    },
+    { immediate: true },
+  );
 
   const deviceId = computed(() => result.value?.deviceId ?? null);
   const deviceToken = computed(() => result.value?.deviceToken ?? null);
