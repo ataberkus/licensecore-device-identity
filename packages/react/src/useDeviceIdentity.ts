@@ -158,8 +158,10 @@ export function useDeviceIdentity(
   useEffect(() => {
     if (!autoResolve) return;
     let cancelled = false;
-    setStatus('loading');
-    setError(null);
+    if (mountedRef.current) {
+      setStatus('loading');
+      setError(null);
+    }
     void clientRef.current
       .resolve()
       .then((next) => {
