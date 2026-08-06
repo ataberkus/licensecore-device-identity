@@ -62,34 +62,32 @@ pnpm size:client       # assert client gzip < 18 KB
 
 Every path still needs the **API** running (this repo’s server or your mount of `@licensecore/server`).
 
+Run this **once** before copying anything into your app:
+
+```bash
+cd /path/to/licensecore-device-identity
+pnpm i
+pnpm build
+```
+
 ---
 
 ## A. Portable script (no npm)
 
 One file. No install. Still talk to your device-identity API.
 
-### 1. Build the file (in this repo)
+### What to copy
 
 ```bash
-pnpm i
-pnpm --filter @licensecore/shared build
-pnpm --filter @licensecore/client build
-```
-
-Artifact:
-
-```text
-packages/client/dist/licensecore-client.min.js
-```
-
-### 2. Copy it into your site
-
-```bash
-# example: copy next to your HTML / static folder
+# from this repo (after pnpm build)
 cp packages/client/dist/licensecore-client.min.js /path/to/your-app/public/
 ```
 
-### 3. Load and call
+| From (this repo) | To (your app) |
+|---|---|
+| `packages/client/dist/licensecore-client.min.js` | `public/licensecore-client.min.js` (or any static folder) |
+
+### Load and call
 
 ```html
 <script src="/licensecore-client.min.js"></script>
@@ -135,44 +133,55 @@ Pin the tag in production.
 
 ## B. Packages in your app
 
-Packages are **`private: true`** (not on public npm yet). Depend via `workspace:`, `file:`, or git submodule.
+Packages are `private: true` (not on public npm yet). Copy the built package folders into your app, then depend on them with `file:`.
 
-### 1. Build this repo once
+### What to copy
+
+Frontend SDK only:
 
 ```bash
-cd /path/to/licensecore-device-identity
-pnpm i
-pnpm --filter @licensecore/shared build
-pnpm --filter @licensecore/client build
-# optional wrappers:
-pnpm --filter @licensecore/react build
-pnpm --filter @licensecore/vue build
-# or everything:
-pnpm build
+# from this repo (after pnpm build)
+mkdir -p /path/to/your-app/vendor/licensecore
+cp -r packages/shared /path/to/your-app/vendor/licensecore/
+cp -r packages/client /path/to/your-app/vendor/licensecore/
 ```
 
-### 2. Add dependencies in your app
+Full stack (browser + API):
 
-**Same pnpm workspace:**
+```bash
+mkdir -p /path/to/your-app/vendor/licensecore
+cp -r packages/shared /path/to/your-app/vendor/licensecore/
+cp -r packages/client /path/to/your-app/vendor/licensecore/
+cp -r packages/server /path/to/your-app/vendor/licensecore/
+```
+
+| From (this repo) | To (your app) | When |
+|---|---|---|
+| `packages/shared/` | `vendor/licensecore/shared/` | Always (types + shared code) |
+| `packages/client/` | `vendor/licensecore/client/` | Browser SDK |
+| `packages/server/` | `vendor/licensecore/server/` | Backend API |
+
+Your app ends up like:
+
+```text
+your-app/
+  vendor/
+    licensecore/
+      shared/     ← copied
+      client/     ← copied (includes dist/)
+      server/     ← copied if you need the API
+  package.json
+  ...
+```
+
+### Wire `package.json`
 
 ```json
 {
   "dependencies": {
-    "@licensecore/client": "workspace:*",
-    "@licensecore/server": "workspace:*",
-    "@licensecore/shared": "workspace:*"
-  }
-}
-```
-
-**Separate repo (relative path):**
-
-```json
-{
-  "dependencies": {
-    "@licensecore/client": "file:../licensecore-device-identity/packages/client",
-    "@licensecore/server": "file:../licensecore-device-identity/packages/server",
-    "@licensecore/shared": "file:../licensecore-device-identity/packages/shared"
+    "@licensecore/shared": "file:./vendor/licensecore/shared",
+    "@licensecore/client": "file:./vendor/licensecore/client",
+    "@licensecore/server": "file:./vendor/licensecore/server"
   }
 }
 ```
@@ -180,10 +189,26 @@ pnpm build
 Then:
 
 ```bash
+cd /path/to/your-app
 pnpm i
 ```
 
-### 3. Run / mount the API
+```ts
+import { DeviceIdentityClient } from '@licensecore/client';
+import { createApp, loadEnv } from '@licensecore/server';
+```
+
+**Prefer not to copy?** Keep this repo on disk and use `file:../licensecore-device-identity/packages/client` instead (same idea, no `cp -r`).
+
+**After updating this repo:** rebuild, re-copy the folders you use, then `pnpm i` in your app.
+
+```bash
+cd /path/to/licensecore-device-identity && pnpm build
+cp -r packages/shared packages/client packages/server /path/to/your-app/vendor/licensecore/
+cd /path/to/your-app && pnpm i
+```
+
+### Run / mount the API
 
 Minimal Node server:
 
@@ -199,7 +224,7 @@ serve({ fetch: app.fetch, port: Number(process.env.PORT ?? 8787) });
 ```
 
 ```bash
-# from this repo, API only:
+# from this repo, API only (no copy needed for local play):
 pnpm dev:server
 # → http://127.0.0.1:8787
 ```
@@ -211,10 +236,10 @@ import { createAppAsync, loadEnv } from '@licensecore/server';
 const app = await createAppAsync({ env: loadEnv() });
 ```
 
-Copy env template:
+Copy env template from this repo if useful:
 
 ```bash
-cp .env.example .env
+cp .env.example /path/to/your-app/.env
 ```
 
 | Variable | Purpose |
@@ -235,7 +260,7 @@ cp .env.example .env
 
 Serve same-origin (proxy `/v1`) or enable CORS for your app origin.
 
-### 4. Call from the browser (plain TS)
+### Call from the browser (plain TS)
 
 ```ts
 import { DeviceIdentityClient } from '@licensecore/client';
@@ -276,10 +301,41 @@ Also available: `collect()`, `resolve()`, `reverify()`, `wipeLocalState()`, `wip
 
 ## C. React
 
+### What to copy
+
 ```bash
-# in this monorepo / after file: dep
-pnpm --filter @licensecore/react build
+# from this repo (after pnpm build)
+mkdir -p /path/to/your-app/vendor/licensecore
+cp -r packages/shared /path/to/your-app/vendor/licensecore/
+cp -r packages/client /path/to/your-app/vendor/licensecore/
+cp -r packages/react /path/to/your-app/vendor/licensecore/
 ```
+
+| From (this repo) | To (your app) |
+|---|---|
+| `packages/shared/` | `vendor/licensecore/shared/` |
+| `packages/client/` | `vendor/licensecore/client/` |
+| `packages/react/` | `vendor/licensecore/react/` |
+
+### Wire `package.json`
+
+```json
+{
+  "dependencies": {
+    "@licensecore/shared": "file:./vendor/licensecore/shared",
+    "@licensecore/client": "file:./vendor/licensecore/client",
+    "@licensecore/react": "file:./vendor/licensecore/react",
+    "react": ">=18"
+  }
+}
+```
+
+```bash
+cd /path/to/your-app
+pnpm i
+```
+
+### Use the hook
 
 ```tsx
 import { useDeviceIdentity } from '@licensecore/react';
@@ -309,19 +365,47 @@ function App() {
 // Imperative only: useDeviceIdentity({ baseUrl: '', autoResolve: false })
 ```
 
-Add to your app:
-
-```json
-{ "dependencies": { "@licensecore/react": "workspace:*" } }
-```
+You still need the device-identity **API** (see [B](#b-packages-in-your-app) — also copy `packages/server`, or run `pnpm dev:server` from this repo).
 
 ---
 
 ## D. Vue 3
 
+### What to copy
+
 ```bash
-pnpm --filter @licensecore/vue build
+# from this repo (after pnpm build)
+mkdir -p /path/to/your-app/vendor/licensecore
+cp -r packages/shared /path/to/your-app/vendor/licensecore/
+cp -r packages/client /path/to/your-app/vendor/licensecore/
+cp -r packages/vue /path/to/your-app/vendor/licensecore/
 ```
+
+| From (this repo) | To (your app) |
+|---|---|
+| `packages/shared/` | `vendor/licensecore/shared/` |
+| `packages/client/` | `vendor/licensecore/client/` |
+| `packages/vue/` | `vendor/licensecore/vue/` |
+
+### Wire `package.json`
+
+```json
+{
+  "dependencies": {
+    "@licensecore/shared": "file:./vendor/licensecore/shared",
+    "@licensecore/client": "file:./vendor/licensecore/client",
+    "@licensecore/vue": "file:./vendor/licensecore/vue",
+    "vue": "^3.0.0"
+  }
+}
+```
+
+```bash
+cd /path/to/your-app
+pnpm i
+```
+
+### Use the composable
 
 ```vue
 <script setup lang="ts">
@@ -344,9 +428,7 @@ const { status, deviceId, error, reverify, resolve } = useDeviceIdentity({
 </template>
 ```
 
-```json
-{ "dependencies": { "@licensecore/vue": "workspace:*" } }
-```
+You still need the device-identity **API** (see [B](#b-packages-in-your-app) — also copy `packages/server`, or run `pnpm dev:server` from this repo).
 
 ---
 
